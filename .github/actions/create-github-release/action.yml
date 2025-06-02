@@ -53,9 +53,6 @@ runs:
         fetch-depth: 0
         token: ${{ inputs.github_token }}
 
-    - name: Setup GitHub CLI
-      uses: cli/gh-installation-action@v1
-
     - name: Determine release name
       id: release_info
       shell: bash
