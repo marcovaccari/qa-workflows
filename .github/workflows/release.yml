@@ -1,0 +1,28 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read version from VERSION file
+        id: version
+        run: |
+          VERSION=$(cat VERSION | tr -d '\n')
+          echo "tag_name=$VERSION" >> $GITHUB_OUTPUT
+          echo "Read version: $VERSION"
+          echo "Generated tag: $VERSION"
+
+      - name: Create GitHub Release
+        uses: trustpair/workflows-backend/.github/actions/create-github-release@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ steps.version.outputs.tag_name }}
+          release_name: "${{ steps.version.outputs.tag_name }}"

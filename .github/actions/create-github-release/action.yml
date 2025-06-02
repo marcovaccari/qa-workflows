@@ -1,0 +1,126 @@
+name: Create GitHub Release
+description: 'Create a GitHub release with auto-generated release notes'
+
+inputs:
+  github_token:
+    description: 'GitHub token with permissions to create releases'
+    required: true
+  tag_name:
+    description: 'The name of the tag for the release'
+    required: true
+  release_name:
+    description: 'The name of the release (defaults to tag_name)'
+    required: false
+    default: ''
+  target_commitish:
+    description: 'The commitish value that determines where the Git tag is created from'
+    required: false
+    default: 'master'
+  prerelease:
+    description: 'Whether this is a prerelease'
+    required: false
+    default: 'false'
+  draft:
+    description: 'Whether this is a draft release'
+    required: false
+    default: 'false'
+  generate_release_notes:
+    description: 'Whether to auto-generate release notes'
+    required: false
+    default: 'true'
+  previous_tag_name:
+    description: 'The name of the previous tag to generate notes from (auto-detected if not provided)'
+    required: false
+    default: ''
+
+outputs:
+  release_id:
+    description: 'The ID of the created release'
+    value: ${{ steps.create_release.outputs.release_id }}
+  release_url:
+    description: 'The URL of the created release'
+    value: ${{ steps.create_release.outputs.release_url }}
+  upload_url:
+    description: 'The upload URL for release assets'
+    value: ${{ steps.create_release.outputs.upload_url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ inputs.github_token }}
+
+    - name: Setup GitHub CLI
+      uses: cli/gh-installation-action@v1
+
+    - name: Determine release name
+      id: release_info
+      shell: bash
+      run: |
+        RELEASE_NAME="${{ inputs.release_name }}"
+        if [ -z "$RELEASE_NAME" ]; then
+          RELEASE_NAME="${{ inputs.tag_name }}"
+        fi
+        echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+
+    - name: Get previous tag for release notes
+      id: previous_tag
+      shell: bash
+      run: |
+        PREVIOUS_TAG="${{ inputs.previous_tag_name }}"
+        if [ -z "$PREVIOUS_TAG" ] && [ "${{ inputs.generate_release_notes }}" == "true" ]; then
+          # Get the second most recent tag
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | head -2 | tail -1)
+          if [ -z "$PREVIOUS_TAG" ]; then
+            # If no previous tag exists, use the first commit
+            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+          fi
+        fi
+        echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      id: create_release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        # Build the gh release create command
+        CMD="gh release create '${{ inputs.tag_name }}'"
+        CMD="$CMD --title '${{ steps.release_info.outputs.release_name }}'"
+        CMD="$CMD --target '${{ inputs.target_commitish }}'"
+
+        if [ "${{ inputs.draft }}" == "true" ]; then
+          CMD="$CMD --draft"
+        fi
+
+        if [ "${{ inputs.prerelease }}" == "true" ]; then
+          CMD="$CMD --prerelease"
+        fi
+
+        if [ "${{ inputs.generate_release_notes }}" == "true" ]; then
+          CMD="$CMD --generate-notes"
+          if [ -n "${{ steps.previous_tag.outputs.previous_tag }}" ]; then
+            CMD="$CMD --notes-start-tag '${{ steps.previous_tag.outputs.previous_tag }}'"
+          fi
+        fi
+
+        # Execute the command and capture output
+        echo "Executing: $CMD"
+        RELEASE_OUTPUT=$(eval $CMD)
+        echo "$RELEASE_OUTPUT"
+
+        # Extract release information
+        RELEASE_URL=$(echo "$RELEASE_OUTPUT" | grep -o 'https://github.com[^[:space:]]*')
+        RELEASE_ID=$(gh release view "${{ inputs.tag_name }}" --json id --jq '.id')
+        UPLOAD_URL="https://uploads.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets{?name,label}"
+
+        echo "release_id=$RELEASE_ID" >> $GITHUB_OUTPUT
+        echo "release_url=$RELEASE_URL" >> $GITHUB_OUTPUT
+        echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
+
+        echo "✅ Release created successfully!"
+        echo "📦 Release ID: $RELEASE_ID"
+        echo "🔗 Release URL: $RELEASE_URL"
