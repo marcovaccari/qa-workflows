@@ -21,7 +21,7 @@ jobs:
           echo "Generated tag: $VERSION"
 
       - name: Create GitHub Release
-        uses: trustpair/workflows-backend/.github/actions/create-github-release@main
+        uses: marcovaccari/qa-workflows/.github/actions/create-github-release
         with:
           github_token: ${{ inputs.github_token }}
           tag_name: ${{ steps.version.outputs.tag_name }}
