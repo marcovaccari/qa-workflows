@@ -72,8 +72,10 @@ runs:
           # Get the second most recent tag
           PREVIOUS_TAG=$(git tag --sort=-version:refname | head -2 | tail -1)
           if [ -z "$PREVIOUS_TAG" ]; then
-            # If no previous tag exists, use the first commit
-            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+            # If no previous tag exists, don't set a start tag (GitHub will use the first commit)
+            echo "No previous tag found, will generate notes from the beginning"
+          else
+            echo "Found previous tag: $PREVIOUS_TAG"
           fi
         fi
         echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
