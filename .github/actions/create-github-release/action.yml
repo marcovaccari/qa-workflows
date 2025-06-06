@@ -14,8 +14,7 @@ inputs:
     default: ''
   target_commitish:
     description: 'The commitish value that determines where the Git tag is created from'
-    required: false
-    default: 'master'
+    required: true
   prerelease:
     description: 'Whether this is a prerelease'
     required: false
