@@ -12,7 +12,7 @@ inputs:
     description: 'The name of the release (defaults to tag_name)'
     required: false
     default: ''
-  target_commitish:
+  target:
     description: 'The commitish value that determines where the Git tag is created from'
     required: true
   prerelease:
@@ -88,7 +88,7 @@ runs:
         # Build the gh release create command
         CMD="gh release create '${{ inputs.tag_name }}'"
         CMD="$CMD --title '${{ steps.release_info.outputs.release_name }}'"
-        CMD="$CMD --target '${{ inputs.target_commitish }}'"
+        CMD="$CMD --target '${{ inputs.target }}'"
 
         if [ "${{ inputs.draft }}" == "true" ]; then
           CMD="$CMD --draft"
@@ -119,6 +119,6 @@ runs:
         echo "release_url=$RELEASE_URL" >> $GITHUB_OUTPUT
         echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
 
-        echo "✅ Release created successfully!"
-        echo "📦 Release ID: $RELEASE_ID"
-        echo "🔗 Release URL: $RELEASE_URL"
+        echo "Release created successfully!"
+        echo "Release ID: $RELEASE_ID"
+        echo "Release URL: $RELEASE_URL"
