@@ -6,7 +6,7 @@ on:
 jobs:
   create-github-release:
     permissions:
-      contents: read
+      contents: write
     uses: marcovaccari/qa-workflows/.github/workflows/create-gh-release.yml@main
     with:
       target: main
